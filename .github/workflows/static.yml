@@ -1,0 +1,285 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐播放器</title>
+    <style>
+        /* --- 基础设置 --- */
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
+            overflow: hidden;
+        }
+
+        /* --- 磨砂玻璃卡片 --- */
+        .player-card {
+            position: relative;
+            width: 320px;
+            padding: 40px 30px;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .player-card:hover {
+            transform: scale(1.02);
+        }
+
+        /* --- 唱片封面 --- */
+        .cover-container {
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 30px;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 5px solid rgba(255,255,255,0.5);
+        }
+
+        .cover-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: rotate 20s linear infinite;
+            animation-play-state: paused;
+        }
+
+        .cover-img.playing {
+            animation-play-state: running;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* --- 歌曲信息 --- */
+        .song-info h2 {
+            margin: 0 0 8px;
+            font-size: 22px;
+            color: #1d1d1f;
+            font-weight: 600;
+        }
+
+        .song-info p {
+            margin: 0;
+            font-size: 16px;
+            color: #86868b;
+            font-weight: 400;
+        }
+
+        /* --- 进度条与时间 --- */
+        .progress-container {
+            margin: 25px 0 10px 0;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.5);
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #86868b;
+            margin-bottom: 25px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* --- 控制按钮 --- */
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            color: #1d1d1f;
+        }
+
+        .btn:active { transform: scale(0.9); }
+
+        .play-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #1d1d1f;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="player-card">
+    <div class="cover-container">
+        <img src="https://via.placeholder.com/300" alt="Cover" class="cover-img" id="cover">
+    </div>
+
+    <div class="song-info">
+        <h2 id="title">Song Name</h2>
+        <p id="artist">Artist</p>
+    </div>
+
+    <div class="progress-container">
+        <input type="range" value="0" max="100" id="progressBar">
+    </div>
+
+    <div class="time-display">
+        <span id="currentTime">0:00</span>
+        <span id="duration">0:00</span>
+    </div>
+
+    <div class="controls">
+        <button class="btn play-btn" id="playBtn">▶</button>
+    </div>
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+    // --- 配置你的音乐 ---
+    const musicData = {
+        title: "我怀念的",
+        artist: "孙燕姿",
+        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=2070&auto=format&fit=crop",
+        src: "/user/pages/04.music/dongdongran/我怀念的.mp3" 
+    };
+
+    // --- 获取元素 ---
+    const audio = document.getElementById('audio');
+    const playBtn = document.getElementById('playBtn');
+    const cover = document.getElementById('cover');
+    const title = document.getElementById('title');
+    const artist = document.getElementById('artist');
+    const progressBar = document.getElementById('progressBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+
+    // --- 初始化 ---
+    title.innerText = musicData.title;
+    artist.innerText = musicData.artist;
+    cover.src = musicData.cover;
+    audio.src = musicData.src;
+
+    // --- 1. 核心修复：格式化时间函数 ---
+    function formatTime(seconds) {
+        // 安全检查：如果时间不是数字或无穷大，返回默认值
+        if (isNaN(seconds) || !isFinite(seconds)) return "0:00";
+        
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // --- 播放/暂停逻辑 ---
+    playBtn.addEventListener('click', () => {
+        if (audio.paused) {
+            audio.play();
+            playBtn.innerHTML = '❚❚';
+            cover.classList.add('playing');
+        } else {
+            audio.pause();
+            playBtn.innerHTML = '▶';
+            cover.classList.remove('playing');
+        }
+    });
+
+    // --- 2. 核心修复：进度条与时间更新 ---
+    audio.addEventListener('timeupdate', () => {
+        const { duration, currentTime } = audio;
+        
+        // 安全检查：防止在音频未加载完成时进行计算
+        if (!isFinite(duration) || !isFinite(currentTime)) return;
+
+        // 计算百分比
+        const progressPercent = (currentTime / duration) * 100;
+        
+        // 确保进度值在 0-100 之间，防止超出范围
+        const clampedProgress = Math.min(100, Math.max(0, progressPercent));
+        
+        // 更新进度条
+        progressBar.value = clampedProgress;
+        
+        // 更新进度条颜色（渐变）
+        progressBar.style.background = `linear-gradient(to right, #1d1d1f ${clampedProgress}%, rgba(0,0,0,0.1) ${clampedProgress}%)`;
+
+        // 更新时间文字
+        currentTimeEl.innerText = formatTime(currentTime);
+        durationEl.innerText = formatTime(duration);
+    });
+
+    // --- 3. 核心修复：拖动进度条 ---
+    progressBar.addEventListener('input', () => {
+        const width = parseFloat(progressBar.value); // 明确转换为数字
+        const duration = audio.duration;
+        
+        // 安全检查：确保时长有效
+        if (!isFinite(width) || !isFinite(duration)) return;
+
+        // 计算新的播放位置
+        const newTime = (width * duration) / 100;
+        
+        // 确保新时间也是有效的
+        if (isFinite(newTime)) {
+            audio.currentTime = newTime;
+        }
+    });
+
+    // --- 歌曲加载元数据后更新总时长 ---
+    audio.addEventListener('loadedmetadata', () => {
+        if (isFinite(audio.duration)) {
+            durationEl.innerText = formatTime(audio.duration);
+        }
+    });
+
+    // --- 错误处理 ---
+    audio.addEventListener('error', (e) => {
+        console.error("音频加载失败:", e.target.error);
+        // 避免因为加载错误导致后续计算崩溃
+        currentTimeEl.innerText = "0:00";
+        durationEl.innerText = "0:00";
+    });
+
+</script>
+
+</body>
+</html>
